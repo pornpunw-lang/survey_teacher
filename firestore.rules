@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper to check if email matches @bu.ac.th domain
+    function isBUEmail() {
+      return isAuthenticated() && request.auth.token.email.matches('.*@bu\\.ac\\.th$');
+    }
+
+    // Check if user is an Admin
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == 'pornpun.w@bu.ac.th' ||
+        (exists(/databases/$(database)/documents/settings/config) && 
+         request.auth.token.email in get(/databases/$(database)/documents/settings/config).data.admins)
+      );
+    }
+
+    // Master data: Anyone can read so survey respondents can load options immediately
+    match /faculties/{facultyId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /programs/{programId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /majors/{majorId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /questions/{questionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Settings config
+    match /settings/config {
+      allow read: if true;
+      allow write: if isAdmin() || (!exists(/databases/$(database)/documents/settings/config));
+    }
+
+    // Survey Responses:
+    // Anyone can create (submit) their response
+    // Only Admin can read, update, or delete responses for the executive dashboard
+    match /responses/{responseId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}
+
