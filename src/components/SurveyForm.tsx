@@ -110,12 +110,10 @@ export default function SurveyForm({ currentLanguage, user, onOpenWelcomeModal }
   const [isSurveyOpen, setIsSurveyOpen] = useState(true);
 
   // Respondent Profile state
-  const [educationLevel, setEducationLevel] = useState<'Bachelor' | 'Master' | 'Doctorate'>('Bachelor');
   const [selectedFaculty, setSelectedFaculty] = useState('');
   const [selectedProgram, setSelectedProgram] = useState('');
   const [selectedMajor, setSelectedMajor] = useState('');
   const [respondentType, setRespondentType] = useState<'Leader' | 'Regular' | 'Teacher'>('Leader');
-  const [isNewTeacher, setIsNewTeacher] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<number>(0);
 
   // Survey Answers state
@@ -166,12 +164,10 @@ export default function SurveyForm({ currentLanguage, user, onOpenWelcomeModal }
             // Pre-populate with previous response to support Editing (แก้ไขคำตอบตนเอง)
             const docData = snap.docs[0].data() as SurveyResponse;
             setExistingResponseId(snap.docs[0].id);
-            setEducationLevel(docData.educationLevel);
             setSelectedFaculty(docData.facultyId);
             setSelectedProgram(docData.programId);
             setSelectedMajor(docData.majorId);
             setRespondentType(docData.respondentType);
-            setIsNewTeacher(docData.isNewTeacher);
             setRatings(docData.ratings || {});
             setStrengths(docData.strengths || '');
             setImprovements(docData.improvements || '');
@@ -198,17 +194,17 @@ export default function SurveyForm({ currentLanguage, user, onOpenWelcomeModal }
     setSelectedMajor('');
   };
 
-  // Available faculties for the currently selected education level
+  // Available faculties that have programs
   const availableFaculties = useMemo(() => {
-    const validFacultyIds = new Set(programs.filter(p => p.educationLevel === educationLevel).map(p => p.facultyId));
+    const validFacultyIds = new Set(programs.map(p => p.facultyId));
     return faculties.filter(f => validFacultyIds.has(f.id));
-  }, [faculties, programs, educationLevel]);
+  }, [faculties, programs]);
 
   // Filtered Programs list
   const filteredPrograms = useMemo(() => {
     if (!selectedFaculty) return [];
-    return programs.filter(p => p.facultyId === selectedFaculty && p.educationLevel === educationLevel);
-  }, [selectedFaculty, programs, educationLevel]);
+    return programs.filter(p => p.facultyId === selectedFaculty);
+  }, [selectedFaculty, programs]);
 
   // Filtered Majors list
   const filteredMajors = useMemo(() => {
@@ -230,16 +226,8 @@ export default function SurveyForm({ currentLanguage, user, onOpenWelcomeModal }
     }
   }, [filteredMajors, selectedMajor]);
 
-  // Questions applicable based on isNewTeacher selection
-  const activeQuestions = useMemo(() => {
-    return questions.filter(q => {
-      // If it's q4_7 (orientation), only show if isNewTeacher is true
-      if (q.isNewTeacherOnly) {
-        return isNewTeacher;
-      }
-      return true;
-    });
-  }, [questions, isNewTeacher]);
+  // All active survey questions
+  const activeQuestions = questions;
 
   // Progress metrics calculation
   const totalQuestionsCount = activeQuestions.length;
@@ -361,20 +349,17 @@ export default function SurveyForm({ currentLanguage, user, onOpenWelcomeModal }
       const prog = programs.find(p => p.id === selectedProgram)!;
       const maj = majors.find(m => m.id === selectedMajor)!;
 
-      // Clean answers - if not new teacher, remove orientation question if present
       const submissionRatings = { ...ratings };
-      if (!isNewTeacher) {
-        delete submissionRatings['q4_7'];
-      }
 
       const respondentId = user?.uid || `guest_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const respondentEmail = user?.email || 'anonymous.faculty@bu.ac.th';
+      const derivedEducationLevel = prog.educationLevel || 'Bachelor';
 
       const payload: Omit<SurveyResponse, 'timestamp'> = {
         userId: respondentId,
         userEmail: respondentEmail,
         academicYear,
-        educationLevel,
+        educationLevel: derivedEducationLevel,
         facultyId: selectedFaculty,
         facultyNameTH: fac.nameTH,
         facultyNameEN: fac.nameEN,
@@ -385,7 +370,7 @@ export default function SurveyForm({ currentLanguage, user, onOpenWelcomeModal }
         majorNameTH: maj.nameTH,
         majorNameEN: maj.nameEN,
         respondentType,
-        isNewTeacher,
+        isNewTeacher: false,
         ratings: submissionRatings,
         strengths,
         improvements,
@@ -674,35 +659,6 @@ export default function SurveyForm({ currentLanguage, user, onOpenWelcomeModal }
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 md:gap-8">
               
-              {/* Education level */}
-              <div className="space-y-2">
-                <label className="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-1.5">
-                  <span>{trans.eduLevelLabel}</span>
-                  <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
-                  {(['Bachelor', 'Master', 'Doctorate'] as const).map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      onClick={() => {
-                        setEducationLevel(level);
-                        setSelectedFaculty('');
-                        setSelectedProgram('');
-                        setSelectedMajor('');
-                      }}
-                      className={`py-2.5 sm:py-3 px-2 sm:px-3 border rounded-xl text-xs sm:text-sm font-bold text-center transition-all cursor-pointer touch-manipulation truncate ${
-                        educationLevel === level
-                          ? 'bg-[#003399] text-white border-[#003399] shadow-sm ring-2 ring-blue-100'
-                          : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90 shadow-2xs'
-                      }`}
-                    >
-                      {level === 'Bachelor' ? trans.bachelor : level === 'Master' ? trans.master : trans.doctorate}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Respondent Type */}
               <div className="space-y-2">
                 <label className="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-1.5">
@@ -784,53 +740,6 @@ export default function SurveyForm({ currentLanguage, user, onOpenWelcomeModal }
                     </option>
                   ))}
                 </select>
-              </div>
-
-              {/* New Teacher Toggle */}
-              <div className="space-y-2">
-                <label className="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-1.5">
-                  <span>{trans.isNewTeacher}</span>
-                  <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsNewTeacher(true)}
-                    className={`py-3 px-4 rounded-xl border text-sm sm:text-base font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer touch-manipulation ${
-                      isNewTeacher === true
-                        ? 'bg-blue-50 border-[#003399] text-[#003399] ring-2 ring-blue-200 font-black shadow-xs'
-                        : 'bg-white hover:bg-slate-50 border-slate-200/90 text-slate-700'
-                    }`}
-                  >
-                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                      isNewTeacher === true ? 'border-[#003399] bg-[#003399]' : 'border-slate-300'
-                    }`}>
-                      {isNewTeacher === true && <span className="w-1.5 h-1.5 rounded-full bg-white"></span>}
-                    </span>
-                    <span>{trans.yes}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsNewTeacher(false);
-                      const newRatings = { ...ratings };
-                      delete newRatings['q4_7'];
-                      setRatings(newRatings);
-                    }}
-                    className={`py-3 px-4 rounded-xl border text-sm sm:text-base font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer touch-manipulation ${
-                      isNewTeacher === false
-                        ? 'bg-blue-50 border-[#003399] text-[#003399] ring-2 ring-blue-200 font-black shadow-xs'
-                        : 'bg-white hover:bg-slate-50 border-slate-200/90 text-slate-700'
-                    }`}
-                  >
-                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                      isNewTeacher === false ? 'border-[#003399] bg-[#003399]' : 'border-slate-300'
-                    }`}>
-                      {isNewTeacher === false && <span className="w-1.5 h-1.5 rounded-full bg-white"></span>}
-                    </span>
-                    <span>{trans.no}</span>
-                  </button>
-                </div>
               </div>
 
             </div>
@@ -932,13 +841,6 @@ export default function SurveyForm({ currentLanguage, user, onOpenWelcomeModal }
                             )}
                           </div>
                         </div>
-                        {quest.isNewTeacherOnly && (
-                          <div className="pl-9 sm:pl-11">
-                            <span className="inline-block bg-amber-100 text-amber-900 text-xs font-bold px-2.5 py-0.5 rounded-md tracking-wide">
-                              เฉพาะอาจารย์ใหม่ / New Teacher Only
-                            </span>
-                          </div>
-                        )}
                       </div>
 
                       {/* Score Selector (Rating 5 -> 1 with rich vibrant color styling and comfortable size across devices) */}

@@ -433,7 +433,7 @@ export default function AdminDashboard({ currentLanguage, adminEmail }: AdminDas
       ...questions.map(q => `Q${q.section}.${q.order}`),
       'Strengths',
       'Improvements',
-      'Comments',
+      'Problems / Negative Feedback',
       'Timestamp'
     ];
 

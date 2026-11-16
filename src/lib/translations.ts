@@ -130,12 +130,12 @@ export const uiTranslations: Record<string, Translation> = {
     EN: 'Please specify areas that need corrections or enhancement...'
   },
   commentsLabel: {
-    TH: '3. ข้อเสนอแนะเพิ่มเติม',
-    EN: '3. Additional Comments / Suggestions'
+    TH: '3. ปัญหา อุปสรรค หรือจุดอ่อนที่พบในการดำเนินงาน',
+    EN: '3. Problems, Obstacles & Negative Aspects'
   },
   commentsPlaceholder: {
-    TH: 'กรุณาระบุข้อเสนอแนะอื่นๆ เพื่อการปรับปรุงอย่างบูรณาการ...',
-    EN: 'Please provide any other constructive feedback for integration...'
+    TH: 'ระบุปัญหา อุปสรรค ข้อจำกัด หรือสิ่งที่ส่งผลกระทบเชิงลบต่อการปฏิบัติงานและการเรียนการสอน...',
+    EN: 'Please describe any problems, obstacles, limitations, or negative aspects encountered...'
   },
   submitBtn: {
     TH: 'ส่งแบบสอบถาม',
